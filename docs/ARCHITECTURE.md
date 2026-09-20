@@ -99,7 +99,7 @@ Locally, `backend/src/local-server.ts` serves the same routes (`/api/*`) and the
 
 React 19 + Vite, one bundle served by the site Lambda, pages loaded lazily.
 
-- **Landing** (`/`, public): hero demo, how it works, the sync explainer, the stack, FAQ. Scrolls as one page with a section strip nav.
+- **Landing** (`/`, public): hero demo, how it works, the sync explainer, the stack, FAQ. Scrolls as one page with a section strip nav. The look is a bordered 1480px column on a hatched ground: each section has a labeled strip ("02 / How it works"), "+" crosshairs drawn from 1px lines sit exactly on the line intersections (`Crosshair` in `components/landing/frame.tsx`), and `CornerMarks` (`components/ui/corner-marks.tsx`) puts L-shaped brackets on boxes, always on for the main panels and on hover for cards. The sign-in and 404 pages use the same column.
 - **Dashboard** (`/app`): a horizontal five-step progress bar for the project you would pick up (the judge sees the newest), the next action under it, stat tiles (videos left, in progress, finished), and one card per project. A finished project has a Watch button that opens a dialog and fetches the video address through the project API (the list does not carry it). The list is cached in memory between visits and polled every 5 s while anything renders.
 - **Studio** (`/app/studio/:id?`): a horizontal stepper across the top (Repo, Script, Record, Sync, Video; a step opens once it is reachable), a compact header, then the step. The repo step is a two-column form with a sticky "Your video" summary. The recorder stays mounted while another step is open, so the camera stream and the list of uploaded scenes survive switching steps. None of the page layout changes what the handlers do.
 
