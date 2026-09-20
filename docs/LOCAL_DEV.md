@@ -115,4 +115,4 @@ git add -A && git commit -m "feat: what changed"
 git push -u origin my-change       # then open a pull request
 ```
 
-Where things live: `shared/` holds the schemas everything else uses (change a shape there first), `backend/src/lib` the logic, `backend/src/handlers` the API routes, `frontend/src` the app, `render/` the video worker. `README.md` and `docs/ARCHITECTURE.md` explain how it fits together, and `CLAUDE.md` lists decisions that were made on purpose.
+Where things live: `shared/` holds the schemas everything else uses (change a shape there first), `backend/src/lib` the logic, `backend/src/handlers` the API routes, `frontend/src` the app, `render/` the video worker. `README.md` and `docs/ARCHITECTURE.md` explain how it fits together (`docs/OPERATIONS.md` covers accounts, deploys and limits), and `CLAUDE.md` lists decisions that were made on purpose.

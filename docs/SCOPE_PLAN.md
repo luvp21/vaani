@@ -43,7 +43,7 @@ Morning:
 - [x] Full pipeline run, start to finish, with real recorded voice
 
 Early afternoon (cut off good-to-haves by ~2–3 PM IST regardless of how it's going):
-- [x] Good-to-haves from `docs/FEATURES.md` picked up once the must-haves were done: slide themes and richer slides, dashboard and Studio redesign (the rest stayed off the list, see that file)
+- [x] Good-to-haves from `docs/FEATURES.md` picked up once the must-haves were done: slide themes and richer slides, dashboard and Studio redesign (the rest is under "Not built yet" in that file)
 
 Late afternoon:
 - [ ] Record the actual 3-minute demo video (remember: **the video is what judges see, there's no live demo**)

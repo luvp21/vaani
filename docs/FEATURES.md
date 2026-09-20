@@ -1,60 +1,104 @@
-# Feature mapping
+# Features
 
-Status as of Sept 20, 2026. The must-have and good-to-have split below is the original one, kept because the reasoning still holds; each row now says what actually happened.
+Everything Vaani does today, where to find it in the app, and what it is built with. The live app is at https://10jlhtgcih.execute-api.us-east-1.amazonaws.com. How the pieces fit together is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
-## Must-have: the walking skeleton
+## From a repo to a script
 
-| Feature | What it does | Built with | Status |
+| Feature | What it does | Where to find it | Built with |
 |---|---|---|---|
-| Repo ingest | Accept a GitHub URL, pull the README, package files and a capped sample of source files | Lambda, GitHub tree API + raw files, S3 cache | Done. One API request per repo, 15 minute cache |
-| User context box | Free-text note on what to emphasize (real numbers, audience, purpose) | app | Done. Notes are used as-is, never invented from |
-| Script generation | Scenes broken into beats, each with a planned visual, in English or natural Hinglish | Gemini (Bedrock is not available on this account) | Done. Two-stage plan-then-write, length control, spoken style rules |
-| Script review and edit | Edit the wording, regenerate a visual or a whole scene from the new text, lock | app + Lambda | Done |
-| Visual generation | Per beat: code highlight, slide, diagram, chart, or product-demo footage | Shiki, shared HTML/CSS, Playwright | Done |
-| Polly fallback narration | AI voice reads the script as a complete backup video | Amazon Polly (Kajal) | Done. Verified end to end; never the primary path |
-| Teleprompter, scene-by-scene recording | One scene at a time; camera + mic; pop-out prompter | `getUserMedia`, MediaRecorder | Done |
-| Product-demo recording | One silent screen clip per demo step, apart from the narration | `getDisplayMedia` | Done. Replaced recording screen and voice together (see below) |
-| Transcription | Word timestamps on each recorded scene | Whisper large-v3 via Groq | Done. AWS Transcribe was tried and replaced |
-| Two-pointer checkpoint sync | Matches the known script to the messy transcript | plain code | Done. Beats within about 440 ms of ground truth in tests. See `docs/SYNC_ALGORITHM.md` |
-| Auto-cut render | Switches visuals at checkpoint times, with the presenter's face in a bubble | Fargate, Playwright, ffmpeg | Done |
-| Beat-level visual tagging | Every beat says which visual it wants | part of script generation | Done |
+| Repo ingest | Reads any public GitHub repo: the README, the package files and a capped sample of source files, with one API request per repo (cached for 15 minutes) | Studio, step 1 (Repo) | Lambda, GitHub API, S3 |
+| Five video formats | Code walkthrough, hackathon demo, product demo, architecture overview, launch teaser. Each has its own scene outline, tone and mix of visuals | Studio, "What kind of video?" | Gemini |
+| English or Hinglish | Hinglish is written the way Indian developers talk, in Latin letters, with English terms kept. English is plain conversational English | Studio, "Script language" | Gemini, with example lines for each language |
+| Written to be spoken | Short sentences, plain words, no dashes or hype. The output is checked against these rules and retried | Automatic | Prompt rules and a check on the result |
+| Target length | 30 seconds to 5 minutes, planned to a word budget at about 135 spoken words a minute | Studio, "How long should it be?" | Two-step generation: plan the scenes, then write each one |
+| Your notes | Audience, purpose and real numbers, used as given and never invented | Studio, "Tell Vaani about it" | Gemini |
+| Bring your own script | Paste your narration. Vaani keeps your words and builds the visuals around them | Studio, "Already have a script?" | Gemini |
 
-## Added after the original plan
+## Review before you record
 
-| Feature | Why |
+| Feature | What it does | Where to find it | Built with |
+|---|---|---|---|
+| Edit the script | Change any word or scene title | Studio, step 2 (Script) | React |
+| Regenerate a visual | "Regenerate visual" or "Update visual to match" rebuilds one beat's visual from its new wording | Studio, Script | Gemini |
+| Rewrite a scene | "Rewrite scene" rebuilds a whole scene's beats and visuals from text you edited, keeping your wording | Studio, Script | Gemini, with a check that the wording is kept |
+| Live preview | Shows the same frames the renderer makes, including the entrance animation | Studio, Script | Shared HTML and CSS in `shared/`, shown scaled in an iframe |
+| Dark or light slides | Dark is an editor-style look. Light uses this website's colors and monospace type. Applies to slides, diagrams, charts, code and the bottom bar | Studio, Repo and Script steps ("Slide theme") | CSS variables, Geist Mono embedded in the frame |
+| Lock | Saves the script so recording and rendering read from one fixed version | Studio, Script, "Lock script" | S3 |
+
+## Visuals
+
+| Feature | What it does | Built with |
+|---|---|---|
+| Code | Syntax-highlighted code with the lines that matter lit and the rest dimmed | Shiki |
+| Statement slide | One big line, for a hook or a closing | Shared HTML and CSS |
+| Bullet points | Three to five short points with the key term in bold | Shared HTML and CSS |
+| Table | Up to five rows and four columns, numbers aligned | Shared HTML and CSS |
+| Stat cards | Two to four big numbers with a caption | Shared HTML and CSS |
+| Two columns | Before and after, or this against that | Shared HTML and CSS |
+| Inline bars | A small bar graph inside a slide | Shared HTML and CSS |
+| Architecture diagram | Three to seven components that really exist in the repo, with labeled arrows and the key one highlighted | Shared SVG layout |
+| Bar chart | Real numbers only, with the source shown | Shared HTML and CSS |
+| Product demo | Your own screen clip, framed and sped up to fit the narration | Browser screen capture, ffmpeg |
+
+The script picks the block that fits what is being said, one per slide, and never invents numbers.
+
+## Record in your own voice
+
+| Feature | What it does | Where to find it | Built with |
+|---|---|---|---|
+| Teleprompter, scene by scene | Read each scene from the prompter. Retake as often as you like before keeping a take | Studio, step 3 (Record) | `getUserMedia`, MediaRecorder |
+| Pop-out prompter | The prompter in its own window, so it can sit next to your camera | Record, "Pop out prompter" | Browser window API |
+| Product-demo clips | One silent screen clip per demo step, recorded apart from your narration, so the app you show can use the microphone. Pause through waiting and retake one step | Record, "Demo clips for this scene" | `getDisplayMedia` |
+| Direct upload | Recordings go from your browser straight to storage | Automatic | S3 presigned URLs |
+| Your face in the video | A round camera bubble, bottom-right, on every scene | Automatic | ffmpeg |
+
+## Cuts land on your words
+
+| Feature | What it does | Where to find it | Built with |
+|---|---|---|---|
+| Transcription | A timestamp for every word you said, in the background | Automatic after each scene | Whisper large-v3 (through Groq) |
+| Two-pointer sync | Matches the script you read against what you said, so every visual cuts in on the right word. Stutters, repeats and filler words don't shift a cut | Studio, step 4 (Sync), "Sync my voice to the script" | Plain code, see [`SYNC_ALGORITHM.md`](SYNC_ALGORITHM.md) |
+
+## The finished video
+
+| Feature | What it does | Where to find it | Built with |
+|---|---|---|---|
+| Render | 1280x720 video: visuals switch at your words, your voice on the audio, your face on top | Studio, step 5 (Video) | Step Functions, ECS Fargate, Playwright, ffmpeg |
+| Clip fitting | A demo clip longer than its narration is sped up to fit and ends on its last frame; a shorter one holds its last frame | Automatic | ffmpeg |
+| Watch and download | Plays in the app, with an MP4 download | Studio, Video, and the dashboard | S3 presigned URL |
+| AI-voice fallback | If you can't record, an AI voice reads the same script and the same video is made from it | Studio, Sync, "Prefer an AI voice?" | Amazon Polly, Kajal voice |
+| Failure handling | A failed render is marked failed, the visitor's render is given back and an alert is raised | Automatic | Step Functions, DynamoDB, SNS, CloudWatch |
+
+## The workspace
+
+| Feature | What it does | Where to find it |
+|---|---|---|
+| Dashboard | A progress bar across the top shows the five steps and the next action ("Record scene 2 of 3"). A stat row shows videos left, in progress and finished. Every project is a card showing where it stands | `/app` |
+| Watch dialog | A finished video plays right on the dashboard | `/app`, "Watch" on a finished project |
+| Studio | A horizontal stepper across the top, a compact header naming the repo, and a repo form with a live summary and the Draft button beside it | `/app/studio` |
+| Reopen anywhere | Any project opens at the right step | `/app`, then a project |
+| Landing page | Explains the idea, with a hero demo and an interactive explainer of the sync | `/` |
+
+## Sign-in and fair use
+
+| Feature | What it does |
 |---|---|
-| Five video formats (code walkthrough, hackathon demo, product demo, architecture overview, launch teaser) | The first output read as a code explanation only; hackathon and product videos need slides, diagrams and demos in balance |
-| Target length (30 seconds to 5 minutes) | Scripts are planned to a word budget at 135 words per minute |
-| Bring your own script | Paste narration; Vaani keeps the words and builds visuals around them |
-| English or Hinglish | So the tool is useful to anyone who wants a fully English video |
-| Spoken-style writing and a machine-writing check | Drafts sounded written, not spoken. Rules and a retry, using patterns from the open-source humanizer skill |
-| Slide themes (dark, light) and richer slides (bullets, tables, stat cards, columns, bars) | Slides read as title cards only. Light follows the website's colors and type; the model now picks a block that fits the content |
-| Presenter face bubble | The first render had the voice but not the person |
-| One demo clip per step, recorded silently | Recording the screen and the narration together collided with apps that use the mic (a voice bot), needed the app in the right state on cue, and made talking while clicking the norm |
-| Clip fitting (speed up to fit, never cut the end, hold the last frame) | A demo's result is usually at the end of the clip |
-| Projects dashboard (progress bar, next step, project cards, Watch dialog), one-page Studio (horizontal stepper, repo form with live summary), landing page | Reopen any project at the right step, and see what to do next |
-| Local render mode | So a render can't silently run older code than the app |
+| Sign-in | Amazon Cognito, plus "Continue with Google". Judges use a private link and need no password |
+| One video of up to 3 minutes | Every visitor account gets one video of at most 3 minutes, checked on the server when drafting, locking and rendering |
+| Private projects | Each account sees only its own projects. The judge account sees all of them |
+| Rate limits | Per account and per minute, with a shared daily cap on renders, so the live demo stays affordable |
 
-## Good-to-have, and what happened
+Details of accounts, roles and limits are in [`OPERATIONS.md`](OPERATIONS.md).
 
-| Feature | Status |
-|---|---|
-| Diagram generation beyond code snippets | Done (diagrams and bar charts) |
-| Multiple aspect ratios (16:9 / 9:16) | Not built |
-| Auto-burned captions | Not built. The word timestamps are there, so it is cheap to add |
-| Auto-zoom on click for demo footage | Not built. A browser can't see clicks in another tab without extra capture, so it stays good-to-have |
-| Manual override of cut timing | Not built. The preview-and-adjust step (see below) is the intended home |
-| Nicer transitions between full-screen and overlay | Partly: every beat enters with an animation; no other transitions |
+## Not built yet
 
-## Ideas we decided not to do today
-
-- **A post-recording editor**: play the whole video in the browser, nudge cut points, trim and speed clips, draw zoom regions. It would sit between Sync and Render, reading a small list of overrides on top of the sync result. Judged too large for deadline day.
-- **Trim or fast-forward a section of a recorded clip.** Pausing while recording is the workaround.
-- **Tab audio in demo clips**, so a voice bot's replies are heard. Show its text on screen for now.
-
-## Explicitly descoped
-
-- Automated browser-driving of a target app's UI (too fragile; screen-share is user-driven)
-- Phrase or meaning-based scene detection (replaced by the two-pointer positional match)
-- Anything that needs a labelled training dataset (this is generation and matching, not classification)
+- Auto-zoom on clicks in product demos
+- A timeline editor after recording (nudging cuts, trimming clips)
+- Line and pie charts (bars, tables, stat cards and inline bars are there)
+- Captions burned into the video (the word timestamps are already there)
+- Other aspect ratios such as 9:16
 - Hindi in Devanagari script (English and Hinglish in Latin letters only)
+- Deleting or renaming a project
+- Tab audio in demo clips, so a voice bot's replies are not captured (show its text on screen)
+
+One thing is left out on purpose: Vaani never drives the app you are demoing. Screen sharing is done by you, so the demo stays real and nothing can break because of automation.

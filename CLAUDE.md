@@ -19,7 +19,7 @@ These were each chosen over a simpler or more "impressive-sounding" alternative,
 
 ## Where things stand
 
-Everything is built and deployed (see the live link in `README.md`), including dark and light slide themes, richer slide blocks (bullets, tables, stat cards), and the redesigned dashboard and Studio. The LLM is Gemini and transcription is Whisper via Groq, not Bedrock and AWS Transcribe as first planned; both are behind provider interfaces. Frontend hosting is a Lambda behind the same HTTP API, because this AWS account can't create CloudFront resources yet. `docs/ARCHITECTURE.md` is the current design; `docs/FEATURES.md` says what is built and what was decided against.
+Everything is built and deployed (see the live link in `README.md`), including dark and light slide themes, richer slide blocks (bullets, tables, stat cards), and the redesigned dashboard and Studio. The LLM is Gemini and transcription is Whisper via Groq, not Bedrock and AWS Transcribe as first planned; both are behind provider interfaces. Frontend hosting is a Lambda behind the same HTTP API, because this AWS account can't create CloudFront resources yet. `docs/ARCHITECTURE.md` is the current design; `docs/FEATURES.md` says what is built, where to find it, and what is not built.
 
 ## Build order
 
@@ -31,7 +31,7 @@ Update `PROGRESS.md` with what's done, what broke, and what's still open. Keep i
 
 ## What NOT to build unless the must-haves are done
 
-Everything in the "good-to-have" table in `docs/FEATURES.md`. Especially: auto-zoom-on-click, multi-visual-beat animation triggered by anything other than the two-pointer checkpoint match, and any attempt to auto-drive a target app's UI via browser automation (not planned — screen-share is user-driven, not agent-driven).
+Everything under "Not built yet" in `docs/FEATURES.md`. Especially: auto-zoom-on-click, multi-visual-beat animation triggered by anything other than the two-pointer checkpoint match, and any attempt to auto-drive a target app's UI via browser automation (not planned — screen-share is user-driven, not agent-driven).
 
 ## Style
 
