@@ -15,6 +15,6 @@
     "build:backend": "npm run build:shared && npm run build --workspace backend",
     "build:frontend": "npm run build:shared && npm run build --workspace frontend",
     "build:render": "npm run build:shared && npm run build --workspace render",
-    "build:site": "npm run build:shared && npm run build --workspace frontend && rm -rf backend/site/dist && cp -r frontend/dist backend/site/dist"
+    "build:site": "npm run build:shared && npm run build --workspace frontend && rm -rf backend/site/dist && cp -r frontend/dist backend/site/dist && node backend/site/precompress.mjs"
   }
 }

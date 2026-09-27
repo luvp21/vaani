@@ -5,9 +5,26 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vaani</title>
+    <style>
+      /* Shown from the HTML itself while the app script downloads, then replaced
+         by React on first render. Matches the app's light background. */
+      html, body { margin: 0; background: #f7f8fa; }
+      .boot { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; font: 500 15px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #5b6472; }
+      .boot-mark { display: flex; align-items: center; justify-content: center; gap: 3px; width: 44px; height: 44px; border-radius: 12px; background: #1266e2; }
+      .boot-mark i { display: block; width: 3px; border-radius: 3px; background: #fff; animation: boot-bar 1s ease-in-out infinite; }
+      .boot-mark i:nth-child(1) { height: 12px; } .boot-mark i:nth-child(2) { height: 22px; animation-delay: 0.12s; }
+      .boot-mark i:nth-child(3) { height: 16px; animation-delay: 0.24s; } .boot-mark i:nth-child(4) { height: 20px; animation-delay: 0.36s; }
+      @keyframes boot-bar { 0%, 100% { transform: scaleY(0.55); } 50% { transform: scaleY(1); } }
+      @media (prefers-reduced-motion: reduce) { .boot-mark i { animation: none; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot" role="status" aria-live="polite">
+        <span class="boot-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>Loading Vaani</span>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

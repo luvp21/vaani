@@ -54,15 +54,33 @@ export function resolveFile(rawPath) {
   return full.startsWith(ROOT + path.sep) ? { full, file } : null;
 }
 
-async function load(full, file, acceptsGzip) {
-  const key = `${full}|${acceptsGzip}`;
+// Brotli files are made once at build time (backend/site/precompress.mjs) and sit
+// next to the originals as `<file>.br`. They are about a sixth smaller than gzip,
+// which matters on the slow links this site is opened from. A browser that
+// accepts br gets one when it exists; everything else falls back to gzip.
+async function readBrotli(full) {
+  try {
+    return await readFile(`${full}.br`);
+  } catch (err) {
+    if (err && err.code === "ENOENT") return null;
+    throw err;
+  }
+}
+
+async function load(full, file, { acceptsGzip, acceptsBrotli }) {
+  const key = `${full}|${acceptsBrotli ? "br" : ""}|${acceptsGzip ? "gzip" : ""}`;
   const hit = cache.get(key);
   if (hit) return hit;
 
-  const raw = await readFile(full);
   const contentType = CONTENT_TYPES[path.extname(full).toLowerCase()] ?? "application/octet-stream";
-  const gzip = acceptsGzip && COMPRESSIBLE.test(contentType);
-  const body = gzip ? gzipSync(raw) : raw;
+  const compressible = COMPRESSIBLE.test(contentType);
+  let body = compressible && acceptsBrotli ? await readBrotli(full) : null;
+  let encoding = body ? "br" : null;
+  if (!body) {
+    const raw = await readFile(full);
+    encoding = compressible && acceptsGzip ? "gzip" : null;
+    body = encoding ? gzipSync(raw) : raw;
+  }
   const headers = {
     "content-type": contentType,
     // Vite fingerprints everything under /assets/, so it can be cached for good.
@@ -72,7 +90,7 @@ async function load(full, file, acceptsGzip) {
     // The private judge link puts its key in the address; never pass that on to
     // another site as a referrer.
     "referrer-policy": "no-referrer",
-    ...(gzip ? { "content-encoding": "gzip" } : {}),
+    ...(encoding ? { "content-encoding": encoding } : {}),
   };
   const entry = { headers, body: body.toString("base64") };
   cache.set(key, entry);
@@ -83,9 +101,12 @@ export async function handler(event) {
   const target = resolveFile(event.rawPath);
   if (!target) return response(404, { "content-type": "text/plain" }, "Not found");
 
-  const acceptsGzip = /\bgzip\b/.test(event.headers?.["accept-encoding"] ?? "");
+  const accepted = event.headers?.["accept-encoding"] ?? "";
   try {
-    const { headers, body } = await load(target.full, target.file, acceptsGzip);
+    const { headers, body } = await load(target.full, target.file, {
+      acceptsGzip: /\bgzip\b/.test(accepted),
+      acceptsBrotli: /\bbr\b/.test(accepted),
+    });
     return response(200, headers, body, true);
   } catch (err) {
     if (err && err.code === "ENOENT") return response(404, { "content-type": "text/plain" }, "Not found");

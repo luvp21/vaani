@@ -2,7 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { mkdirSync, writeFileSync, rmSync, existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { gunzipSync } from "node:zlib";
+import { brotliCompressSync, brotliDecompressSync, gunzipSync } from "node:zlib";
 
 // The handler is plain .mjs (zipped as-is for Lambda), loaded here at runtime.
 const siteDir = path.resolve(import.meta.dirname, "../../site");
@@ -24,12 +24,21 @@ before(() => {
     ["index.html", "<html>app</html>"],
     ["assets/app-abc123.js", "console.log('hi')"],
     ["logo.png", "png-bytes"],
+    ["assets/pre-def456.js", "console.log('pre')"],
   ] as const) {
     const full = path.join(distDir, rel);
     if (!existsSync(full)) {
       writeFileSync(full, body);
       created.push(full);
     }
+  }
+});
+before(() => {
+  // The build step (backend/site/precompress.mjs) leaves a .br file next to a text file.
+  const br = path.join(distDir, "assets/pre-def456.js.br");
+  if (!existsSync(br)) {
+    writeFileSync(br, brotliCompressSync(Buffer.from("console.log('pre')")));
+    created.push(br);
   }
 });
 after(() => {
@@ -59,6 +68,18 @@ test("fingerprinted assets are cached for a year and gzip when the browser accep
   const plain = await get("/assets/app-abc123.js");
   assert.equal(plain.headers["content-encoding"], undefined);
   assert.equal(Buffer.from(plain.body, "base64").toString(), "console.log('hi')");
+});
+
+test("a browser that accepts br gets the precompressed file; others fall back to gzip or plain", async () => {
+  const withBr = await get("/assets/pre-def456.js", "gzip, deflate, br");
+  assert.equal(withBr.headers["content-encoding"], "br");
+  assert.equal(withBr.headers.vary, "accept-encoding");
+  assert.equal(brotliDecompressSync(Buffer.from(withBr.body, "base64")).toString(), "console.log('pre')");
+  const gzipOnly = await get("/assets/pre-def456.js", "gzip");
+  assert.equal(gzipOnly.headers["content-encoding"], "gzip");
+  assert.equal(gunzipSync(Buffer.from(gzipOnly.body, "base64")).toString(), "console.log('pre')");
+  const noBr = await get("/assets/app-abc123.js", "gzip, deflate, br");
+  assert.equal(noBr.headers["content-encoding"], "gzip", "no .br file, so it falls back to gzip");
 });
 
 test("binary files are not gzipped", async () => {

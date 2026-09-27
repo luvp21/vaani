@@ -1296,3 +1296,16 @@ Notes:
   column, bigger section labels, exact crosshairs, corner marks" is pushed to `origin/main`.
 
 - **Docs reorganised around features (Sept 20 evening).** The README now leads with what a judge can see and try, grouped by what a person does (repo to script, review, visuals, record, cuts, finished video, workspace, sign-in), then how it works and where AWS fits, and links to the deeper docs. `docs/FEATURES.md` is a feature guide (what it does, where to find it in the app, what it is built with) instead of a status table. Everything about running the app moved, unchanged, to the new `docs/OPERATIONS.md`: accounts and roles, running locally, deploying, operational limits, the test command. The build log, debugging notes and decisions stay in `PROGRESS.md` and `docs/ARCHITECTURE.md`. `CLAUDE.md` and `docs/SCOPE_PLAN.md` now point at "Not built yet" in the features doc, since the old good-to-have table is gone.
+- **Sign-out hidden for the judge, and faster first load (Sept 20, about 7:40 PM).** The sidebar
+  "Sign out" button is not shown to the `judge` role (testers keep it), so a judge can't end
+  their session by accident. Load time: measured from India, the same 154 KB took anywhere from
+  1.7 s to 24 s straight from S3 in us-east-1, so most of the slowness is the network route to
+  Virginia, not the app; CloudFront would be the real fix and this account can't create it yet.
+  What was done instead: a logo splash in `frontend/index.html` shows at once while the script
+  downloads, and the site now serves Brotli (precompressed at build time by
+  `backend/site/precompress.mjs`): main script 154 KB -> 133 KB, styles 18 KB -> 15 KB. Checked
+  live: br served to browsers that accept it, gzip and plain still work, the bundle decompresses
+  identical to the local build, judge link 200, API 401 without a token. 100 tests. Ideas not done:
+  a second region closer to India, dropping the Devanagari font (146 KB, only the footer word
+  uses it), splitting the main script.
+

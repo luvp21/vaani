@@ -101,12 +101,16 @@ export function AppShell() {
                   )}
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton tooltip="Sign out" onClick={signOut}>
-                  <LogOut />
-                  <span>Sign out</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {/* The judge gets in through a private link whose key is removed from the address bar, so
+                  signing out by accident could lock them out. Only their session ends by expiry. */}
+              {session?.role !== "judge" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton tooltip="Sign out" onClick={signOut}>
+                    <LogOut />
+                    <span>Sign out</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarFooter>
           <SidebarRail />

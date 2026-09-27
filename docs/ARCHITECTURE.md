@@ -91,7 +91,7 @@ Browser ──https──> API Gateway HTTP API ──┬─ GET /, /{proxy+}   
                          └─ on failure: RenderFailedFunction -> DynamoDB refund + SNS alert
 ```
 
-Everything is in `backend/template.yaml`. CloudFront would normally front the site, but this account can't create CloudFront resources until AWS verifies it, so the frontend is served by `backend/site/index.mjs` (gzip, immutable caching for fingerprinted assets, SPA fallback, path-traversal guarded). The API is throttled (50 rps, burst 100) because it is public and each call can spend model, transcription, TTS or Fargate money.
+Everything is in `backend/template.yaml`. CloudFront would normally front the site, but this account can't create CloudFront resources until AWS verifies it, so the frontend is served by `backend/site/index.mjs` (Brotli when the browser accepts it, otherwise gzip; immutable caching for fingerprinted assets; SPA fallback; path-traversal guarded). The Brotli files are made once at build time by `backend/site/precompress.mjs`, which `npm run build:site` runs. `frontend/index.html` also carries a small logo splash that shows while the script downloads, and React replaces it on first render. The API is throttled (50 rps, burst 100) because it is public and each call can spend model, transcription, TTS or Fargate money.
 
 Locally, `backend/src/local-server.ts` serves the same routes (`/api/*`) and the Vite dev server proxies to it. With `RENDER_MODE=local` the render worker runs from the checkout instead of Fargate.
 
