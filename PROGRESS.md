@@ -1331,3 +1331,12 @@ Notes:
   `"license": "MIT"` in the root `package.json`). The repo was made public earlier the same day; until
   this file existed it was public but not open source.
 
+
+## Sunday, Sept 27 (post-hackathon)
+
+- **Video creation reopened for public demo.** Redeployed with `PauseVideoCreation=false` (was `true`
+  during First Commit judging). Checked live: every Lambda's `VIDEO_CREATION_PAUSED` env var reads
+  `false`; a fresh throwaway tester account (created and deleted via the Cognito admin API) got real
+  limits (`{"drafts":5,"locks":3,"renders":1}`, not zero) and a successful `POST /api/ingest` (200).
+  Landing page and judge link both still 200, no Lambda errors in the following 10 minutes, both
+  CloudWatch alarms OK. README and `docs/OPERATIONS.md` updated to say the pause is off.
