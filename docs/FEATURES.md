@@ -87,6 +87,7 @@ The script picks the block that fits what is being said, one per slide, and neve
 | One video of up to 3 minutes | Every visitor account gets one video of at most 3 minutes, checked on the server when drafting, locking and rendering |
 | Private projects | Each account sees only its own projects. The judge account sees all of them |
 | Rate limits | Per account and per minute, with a shared daily cap on renders, so the live demo stays affordable |
+| Pause switch | A deploy setting (`PauseVideoCreation`) that stops accounts with limits from creating videos, while sign-in, browsing and the judge and team accounts keep working |
 
 Details of accounts, roles and limits are in [`OPERATIONS.md`](OPERATIONS.md).
 

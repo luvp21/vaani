@@ -35,6 +35,11 @@ Parameters:
     NoEcho: true
     Default: ""
     Description: Optional. OAuth client secret from Google Cloud Console.
+  PauseVideoCreation:
+    Type: String
+    Default: "false"
+    AllowedValues: ["true", "false"]
+    Description: When "true", accounts with limits (testers and Google members) cannot draft, lock or render a video. The judge and team accounts are not affected. Pass it on every deploy, because a parameter left out goes back to its default.
   AlertEmail:
     Type: String
     Default: ""
@@ -67,6 +72,7 @@ Globals:
         WEB_CLIENT_ID: !If [HasGoogle, !Ref WebClient, ""]
         COGNITO_DOMAIN: !If [HasGoogle, !Sub "vaani-${AWS::AccountId}.auth.${AWS::Region}.amazoncognito.com", ""]
         SITE_URL: !Ref SiteUrl
+        VIDEO_CREATION_PAUSED: !Ref PauseVideoCreation
         USAGE_TABLE: !Ref UsageTable
 
 Resources:

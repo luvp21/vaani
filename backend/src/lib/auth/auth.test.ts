@@ -1,12 +1,12 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { consume, memoryStore, refund, getUsage } from "./quota.js";
+import { activeLimits, consume, memoryStore, refund, getUsage } from "./quota.js";
 import { checkJudgeLinkKey, judgeLinkKey } from "./judgeLink.js";
 import { authenticate, canAccess, HttpError, requireJudge } from "./access.js";
 import { createVerifier, sessionExpiry, verifyIdToken } from "./verify.js";
 import { FetchError } from "aws-jwt-verify/error";
-import { hasLimits } from "@vaani/shared";
+import { hasLimits, PAUSED_LIMITS, TESTER_LIMITS } from "@vaani/shared";
 import { assertAllowedRedirect, assertPasswordLoginAllowed } from "./cognito.js";
 import { authConfig } from "../../handlers/auth.js";
 
@@ -190,6 +190,29 @@ test("drafts and locks have their own limits, accounts are separate, and the jud
   assert.equal((await consume("tester2", "tester", "drafts", store)).ok, true, "one account's use doesn't count against another");
   for (let i = 0; i < 20; i++) assert.equal((await consume("judge", "judge", "renders", store)).ok, true);
   assert.deepEqual(await getUsage("judge", store), { drafts: 0, locks: 0, renders: 0 }, "the judge is never counted");
+});
+
+test("while video creation is paused, accounts with limits can do nothing, and the judge and team still can", async () => {
+  const before = process.env.VIDEO_CREATION_PAUSED;
+  process.env.VIDEO_CREATION_PAUSED = "true";
+  try {
+    assert.deepEqual(activeLimits(), PAUSED_LIMITS);
+    const store = memoryStore();
+    for (const kind of ["drafts", "locks", "renders"] as const) {
+      // A fresh account has no counter at all, which must not slip through once.
+      const refused = await consume("newcomer", "member", kind, store);
+      assert.equal(refused.ok, false, `${kind} is refused for a brand-new member`);
+      assert.equal((await consume("tester1", "tester", kind, store)).ok, false);
+      assert.equal((await consume("tester3", "team", kind, store)).ok, true, "team accounts are unaffected");
+      assert.equal((await consume("judge", "judge", kind, store)).ok, true, "the judge is unaffected");
+    }
+    assert.match((await consume("newcomer", "member", "renders", store) as { message: string }).message, /paused/i);
+    assert.deepEqual(await getUsage("newcomer", store), { drafts: 0, locks: 0, renders: 0 }, "a refusal counts nothing");
+  } finally {
+    if (before === undefined) delete process.env.VIDEO_CREATION_PAUSED;
+    else process.env.VIDEO_CREATION_PAUSED = before;
+  }
+  assert.deepEqual(activeLimits(), TESTER_LIMITS, "back to normal once the setting is off");
 });
 
 test("a refund never goes below zero", async () => {

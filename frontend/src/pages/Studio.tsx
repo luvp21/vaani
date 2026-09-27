@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import * as api from "@/lib/api";
 import { generateInSteps } from "@/lib/generate";
 import { useAuth } from "@/lib/auth";
+import { videoCreationPaused } from "@/lib/stage";
 
 const RENDER_POLL_INTERVAL_MS = 3000;
 
@@ -51,7 +52,7 @@ function stepForProject(detail: ProjectDetail): StepId {
 export default function Studio() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { refresh: refreshAllowance } = useAuth();
+  const { session, refresh: refreshAllowance } = useAuth();
 
   const [active, setActive] = useState<StepId>("repo");
   const [generateStatus, setGenerateStatus] = useState<GenerateStatus | null>(null);
@@ -301,6 +302,15 @@ export default function Studio() {
           <Alert variant="destructive">
             <AlertTitle>Something went wrong</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {active === "repo" && videoCreationPaused(session) && (
+          <Alert>
+            <AlertTitle>New videos are paused</AlertTitle>
+            <AlertDescription>
+              Video creation is switched off while the hackathon is being judged. You can still explore the app and see how it works. Judges have full access.
+            </AlertDescription>
           </Alert>
         )}
 

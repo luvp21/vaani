@@ -1308,4 +1308,15 @@ Notes:
   identical to the local build, judge link 200, API 401 without a token. 100 tests. Ideas not done:
   a second region closer to India, dropping the Devanagari font (146 KB, only the footer word
   uses it), splitting the main script.
+- **Video creation paused for the public (Sept 20, about 8:20 PM by the server clock).** New deploy
+  setting `PauseVideoCreation` (template parameter, passed as `true` in the current deploy,
+  default `false`) sets `VIDEO_CREATION_PAUSED` on every Lambda. `activeLimits()` in
+  `backend/src/lib/auth/quota.ts` then returns all zeros for accounts with limits (testers, Google
+  members), and `consume()` refuses at once with a clear message. A refusal is explicit, because the
+  DynamoDB check (`attribute_not_exists OR count < limit`) would have let a brand-new account
+  through once at a limit of zero. The judge and team accounts have no limits, so they still
+  create videos. The app shows "Video creation is paused" (dashboard tile, Studio notice, disabled
+  Draft button). Tested (101 tests, including a brand-new member and a check that the judge and
+  team are unaffected); env var confirmed on the Auth, ScriptPlan, LockScript and RenderTrigger
+  functions. To reopen: redeploy with `PauseVideoCreation=false` and every other parameter.
 

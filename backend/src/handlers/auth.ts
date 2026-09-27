@@ -5,7 +5,6 @@ import {
   JudgeLinkRequestSchema,
   LoginRequestSchema,
   RefreshRequestSchema,
-  TESTER_LIMITS,
   type AuthConfig,
   type LoginResponse,
   type RefreshResponse,
@@ -16,7 +15,7 @@ import { authenticate, HttpError } from "../lib/auth/access.js";
 import { googleSignIn, judgeSignIn, passwordSignIn, refreshSession, type Tokens } from "../lib/auth/cognito.js";
 import { enforceRate } from "../lib/auth/rateLimit.js";
 import { checkJudgeLinkKey } from "../lib/auth/judgeLink.js";
-import { getUsage } from "../lib/auth/quota.js";
+import { activeLimits, getUsage } from "../lib/auth/quota.js";
 import { sessionExpiry, verifyIdToken, type Auth } from "../lib/auth/verify.js";
 import { errorResponse } from "./secure.js";
 
@@ -25,7 +24,7 @@ const FAILED_ATTEMPT_DELAY_MS = 500;
 
 async function sessionFor(auth: Auth): Promise<Session> {
   return hasLimits(auth.role)
-    ? { username: auth.username, display_name: auth.name, role: auth.role, usage: await getUsage(auth.username), limits: TESTER_LIMITS }
+    ? { username: auth.username, display_name: auth.name, role: auth.role, usage: await getUsage(auth.username), limits: activeLimits() }
     : { username: auth.username, display_name: auth.name, role: auth.role };
 }
 

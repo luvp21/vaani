@@ -75,12 +75,20 @@ export function newestFirst(projects: ProjectSummary[]): ProjectSummary[] {
   return [...projects].sort((a, b) => b.locked_at.localeCompare(a.locked_at));
 }
 
+// True while the server has video creation paused: an account with limits then has
+// none left to use (the judge and team accounts have no limits and are unaffected).
+export function videoCreationPaused(session: Pick<Session, "limits"> | null | undefined): boolean {
+  const limits = session?.limits;
+  return limits !== undefined && limits.drafts === 0 && limits.locks === 0 && limits.renders === 0;
+}
+
 // What an account has left, in words. Judge and team accounts have no limit.
 export function allowanceText(session: Pick<Session, "role" | "usage" | "limits"> | null | undefined): string | null {
   if (!session) return null;
   if (session.role === "judge") return "Sees every project";
   if (session.role === "team") return "Team account, no limits";
   if (!session.usage || !session.limits) return null;
+  if (videoCreationPaused(session)) return "Video creation is paused";
   const left = Math.max(0, session.limits.renders - session.usage.renders);
   return left > 0 ? `${left} video${left === 1 ? "" : "s"} left` : "Video made";
 }

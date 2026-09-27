@@ -57,7 +57,7 @@ The video uses **your real voice and face**. An AI voice (Amazon Polly) exists o
 
 ### Sign-in and fair use
 - **Amazon Cognito** sign-in, plus "Continue with Google". Judges get a private link and need no password.
-- **One video of up to 3 minutes** per visitor account, enforced on the server. A failed render is given back automatically.
+- **One video of up to 3 minutes** per visitor account, enforced on the server. A failed render is given back automatically. While the hackathon is being judged, new videos are paused for visitor accounts (a deploy setting); the landing page and sign-in still work, and the judge account can create videos.
 - **Rate limits** and a shared daily cap on renders keep the live demo affordable. Details in [`docs/OPERATIONS.md`](docs/OPERATIONS.md).
 
 ### Not built yet

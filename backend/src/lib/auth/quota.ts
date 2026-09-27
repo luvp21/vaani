@@ -1,6 +1,6 @@
 import { ConditionalCheckFailedException, DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
-import { hasLimits, TESTER_LIMITS, type AuthRole, type Limits, type Usage } from "@vaani/shared";
+import { hasLimits, PAUSED_LIMITS, PAUSED_MESSAGE, TESTER_LIMITS, type AuthRole, type Limits, type Usage } from "@vaani/shared";
 
 export type QuotaKind = keyof Usage;
 
@@ -100,6 +100,12 @@ export function memoryStore(): UsageStore {
   };
 }
 
+// The limits in force right now: the normal tester limits, or all zeros while
+// video creation is paused (VIDEO_CREATION_PAUSED=true, set by the stack).
+export function activeLimits(): Limits {
+  return process.env.VIDEO_CREATION_PAUSED === "true" ? PAUSED_LIMITS : TESTER_LIMITS;
+}
+
 let store: UsageStore | undefined;
 function defaultStore(): UsageStore {
   return (store ??= dynamoStore());
@@ -115,9 +121,12 @@ export async function consume(
   role: AuthRole,
   kind: QuotaKind,
   using: UsageStore = defaultStore(),
-  limits: Limits = TESTER_LIMITS,
+  limits: Limits = activeLimits(),
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   if (!hasLimits(role)) return { ok: true };
+  // A limit of zero must refuse outright: the counter check below lets a brand-new
+  // account (no counter yet) through once.
+  if (limits[kind] === 0) return { ok: false, message: PAUSED_MESSAGE };
   return (await using.increment(username, kind, limits[kind])) ? { ok: true } : { ok: false, message: MESSAGES[kind] };
 }
 

@@ -58,7 +58,7 @@ export PATH="$PWD/../node_modules/.bin:$PATH"   # sam build needs esbuild
 sam build
 sam deploy --stack-name vaani-backend --region us-east-1 --resolve-s3 \
   --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM \
-  --parameter-overrides GeminiApiKey=... GroqApiKey=... AuthSecret=... AlertEmail=you@example.com GoogleClientId=... GoogleClientSecret=... VpcId=... SubnetIds=subnet-a,subnet-b
+  --parameter-overrides GeminiApiKey=... GroqApiKey=... AuthSecret=... AlertEmail=you@example.com GoogleClientId=... GoogleClientSecret=... VpcId=... SubnetIds=subnet-a,subnet-b PauseVideoCreation=false
 ```
 
 Then build and push the render image. Do this again after any change under `render/` or `shared/`, because Fargate runs whatever is in ECR:
@@ -67,6 +67,8 @@ Then build and push the render image. Do this again after any change under `rend
 docker build -f render/Dockerfile -t <account>.dkr.ecr.<region>.amazonaws.com/vaani-render:latest .
 docker push <account>.dkr.ecr.<region>.amazonaws.com/vaani-render:latest
 ```
+
+**Pausing video creation.** `PauseVideoCreation=true` stops every account that has limits (testers and Google members) from drafting, locking or rendering: the server refuses with a clear message and the app shows "Video creation is paused". The judge and team accounts are not affected, and everyone can still sign in and look around. It was on during judging. Set it back to `false` (and redeploy with every other parameter) to reopen creation.
 
 Pass **every** parameter on every deploy: a parameter left out reverts to its default, which for the Google ones removes the Cognito Google resources. Deploy output echoes parameter overrides, so redact keys before sharing a log.  `GithubToken` is an optional parameter that lifts GitHub's unauthenticated limit.
 

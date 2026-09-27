@@ -12,7 +12,7 @@ import { ProjectCard, StageBadge } from "@/components/app/ProjectCard";
 import { ProjectStepper } from "@/components/app/ProjectStepper";
 import { WatchDialog } from "@/components/app/WatchDialog";
 import { useAuth } from "@/lib/auth";
-import { STAGE_ACTION, STAGE_STEPS_DONE, nextStepText, newestFirst, repoParts } from "@/lib/stage";
+import { STAGE_ACTION, STAGE_STEPS_DONE, nextStepText, newestFirst, repoParts, videoCreationPaused } from "@/lib/stage";
 import * as api from "@/lib/api";
 import { CornerMarks } from "@/components/ui/corner-marks";
 
@@ -162,6 +162,7 @@ export default function Dashboard() {
 
   const limited = session?.limits !== undefined && session.usage !== undefined;
   const left = limited ? Math.max(0, session.limits!.renders - session.usage!.renders) : null;
+  const paused = videoCreationPaused(session);
   const canMakeMore = left === null || left > 0;
 
   function copyLink(id: string) {
@@ -199,7 +200,7 @@ export default function Dashboard() {
             <Stat
               label="Videos left"
               value={left === null ? "Unlimited" : String(left)}
-              note={left === null ? undefined : "One video, up to 3 minutes"}
+              note={left === null ? undefined : paused ? "Paused while the hackathon is judged" : "One video, up to 3 minutes"}
             />
             <Stat label="In progress" value={String(inProgress)} />
             <Stat label="Finished" value={String(finished)} />

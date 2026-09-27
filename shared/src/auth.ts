@@ -50,6 +50,12 @@ export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 
 export const TESTER_LIMITS: Limits = { drafts: 5, locks: 3, renders: 1 };
 
+// While video creation is paused (for example during judging), no account that has
+// limits may draft, lock or render. The judge and team accounts have no limits, so
+// they are not affected. Switched on by the VIDEO_CREATION_PAUSED setting.
+export const PAUSED_LIMITS: Limits = { drafts: 0, locks: 0, renders: 0 };
+export const PAUSED_MESSAGE = "New videos are paused while the hackathon is being judged. You can still sign in and look around.";
+
 // The private judge link carries a long key; opening it signs the judge in.
 export const JudgeLinkRequestSchema = z.object({
   key: z.string().min(20).max(200),

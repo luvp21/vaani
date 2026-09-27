@@ -13,6 +13,8 @@ interface VideoSummaryProps {
   // Set when the user pasted their own script: its length sets the video's.
   ownScriptWords: number;
   limited: boolean;
+  // Video creation is switched off for this account for now.
+  paused: boolean;
   disabled: boolean;
 }
 
@@ -27,7 +29,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 // A live summary of what is about to be made, next to the submit button, so
 // the choices are visible in one place and the button never scrolls away.
-export function VideoSummary({ format, language, theme, minutes, ownScriptWords, limited, disabled }: VideoSummaryProps) {
+export function VideoSummary({ format, language, theme, minutes, ownScriptWords, limited, paused, disabled }: VideoSummaryProps) {
   const f = VIDEO_FORMATS[format];
   const hasOwnScript = ownScriptWords > 0;
   return (
@@ -60,7 +62,11 @@ export function VideoSummary({ format, language, theme, minutes, ownScriptWords,
         Draft the script
         <ArrowRight data-icon="inline-end" />
       </Button>
-      {limited && <p className="text-center font-mono text-xs text-muted-foreground">One video, up to {MAX_VIDEO_MINUTES} minutes.</p>}
+      {paused ? (
+        <p className="text-center font-mono text-xs text-muted-foreground">New videos are paused while the hackathon is being judged.</p>
+      ) : (
+        limited && <p className="text-center font-mono text-xs text-muted-foreground">One video, up to {MAX_VIDEO_MINUTES} minutes.</p>
+      )}
     </Card>
   );
 }

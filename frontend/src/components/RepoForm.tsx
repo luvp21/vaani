@@ -34,6 +34,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
+import { videoCreationPaused } from "@/lib/stage";
 
 export type GeneratePhase = "ingest" | "plan" | "write";
 export interface GenerateStatus {
@@ -103,6 +104,7 @@ export function RepoForm({ onSubmit, status }: RepoFormProps) {
   const scriptWords = countWords(sourceScript);
   const hasOwnScript = scriptWords > 0;
   const scriptTooLong = limited && scriptWords > maxWords;
+  const paused = videoCreationPaused(session);
   const busy = status !== null;
 
   function handleSubmit(e: React.FormEvent) {
@@ -305,7 +307,8 @@ export function RepoForm({ onSubmit, status }: RepoFormProps) {
           minutes={minutes}
           ownScriptWords={scriptWords}
           limited={limited}
-          disabled={busy || !repoUrl.trim() || scriptTooLong}
+          paused={paused}
+          disabled={busy || paused || !repoUrl.trim() || scriptTooLong}
         />
       </aside>
     </form>
