@@ -1,7 +1,7 @@
 import { test, before } from "node:test";
 import assert from "node:assert/strict";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { activeLimits, consume, memoryStore, refund, getUsage } from "./quota.js";
+import { activeLimits, consume, memoryStore, pausedFor, refund, getUsage } from "./quota.js";
 import { checkJudgeLinkKey, judgeLinkKey } from "./judgeLink.js";
 import { authenticate, canAccess, HttpError, requireJudge } from "./access.js";
 import { createVerifier, sessionExpiry, verifyIdToken } from "./verify.js";
@@ -207,12 +207,19 @@ test("while video creation is paused, accounts with limits can do nothing, and t
       assert.equal((await consume("judge", "judge", kind, store)).ok, true, "the judge is unaffected");
     }
     assert.match((await consume("newcomer", "member", "renders", store) as { message: string }).message, /paused/i);
+    // Routes that spend money but carry no quota (write-scene, scene-gen) are closed too.
+    assert.equal(pausedFor("tester", true), true);
+    assert.equal(pausedFor("member", true), true);
+    assert.equal(pausedFor("tester", false), false, "browsing routes stay open");
+    assert.equal(pausedFor("team", true), false);
+    assert.equal(pausedFor("judge", true), false);
     assert.deepEqual(await getUsage("newcomer", store), { drafts: 0, locks: 0, renders: 0 }, "a refusal counts nothing");
   } finally {
     if (before === undefined) delete process.env.VIDEO_CREATION_PAUSED;
     else process.env.VIDEO_CREATION_PAUSED = before;
   }
   assert.deepEqual(activeLimits(), TESTER_LIMITS, "back to normal once the setting is off");
+  assert.equal(pausedFor("tester", true), false, "nothing is refused once the setting is off");
 });
 
 test("a refund never goes below zero", async () => {

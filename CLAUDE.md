@@ -1,6 +1,6 @@
 # Operating instructions
 
-Read this before writing any code. This project has a hard deadline (Sunday 8:00 PM IST) and a set of architectural decisions that were already worked through in detail before any code was written — don't re-derive or second-guess them, build against them.
+Read this before writing any code. This project has a hard deadline (Sunday, originally 8:00 PM IST, extended by the organisers to 12:00 AM IST) and a set of architectural decisions that were already worked through in detail before any code was written — don't re-derive or second-guess them, build against them.
 
 ## Non-negotiable decisions already made
 

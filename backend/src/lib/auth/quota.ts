@@ -102,8 +102,19 @@ export function memoryStore(): UsageStore {
 
 // The limits in force right now: the normal tester limits, or all zeros while
 // video creation is paused (VIDEO_CREATION_PAUSED=true, set by the stack).
+export function videoCreationIsPaused(): boolean {
+  return process.env.VIDEO_CREATION_PAUSED === "true";
+}
+
 export function activeLimits(): Limits {
-  return process.env.VIDEO_CREATION_PAUSED === "true" ? PAUSED_LIMITS : TESTER_LIMITS;
+  return videoCreationIsPaused() ? PAUSED_LIMITS : TESTER_LIMITS;
+}
+
+// While paused, accounts with limits may not use any route that spends money
+// (models, transcription, voices, Fargate), not only the ones that carry a quota:
+// write-scene and scene-gen have none of their own, since drafting is charged once.
+export function pausedFor(role: AuthRole, spendsMoney: boolean | undefined): boolean {
+  return spendsMoney === true && hasLimits(role) && videoCreationIsPaused();
 }
 
 let store: UsageStore | undefined;

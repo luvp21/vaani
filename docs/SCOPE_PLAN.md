@@ -2,7 +2,7 @@
 
 **Status, Sunday Sept 20 (evening).** Every must-have is built and deployed, along with the good-to-haves that were picked up (slide themes and richer slides, the redesigned dashboard and Studio, the landing page). The whole pipeline runs on the live app with a real recording, the Polly fallback works, and a light-theme render was checked on Fargate after the last deploy. Remaining today: the demo video, the writeup, making the repo public and submitting. `PROGRESS.md` has the detailed log. The plan below is the original one, with what is done ticked. Where it changed: the LLM is Gemini and transcription is Whisper (not Bedrock and Transcribe), the only Step Functions state machine is the render workflow, and screen recording became one silent clip per demo step.
 
-Deadline: **Sunday, Sept 20, 8:00 PM IST**, submission form on the hackathon's own page. No live demo — judges only see what's in the submission, so the demo video and the writeup matter as much as the code.
+Deadline: **Sunday, Sept 20, originally 8:00 PM IST, extended by the organisers to 12:00 AM (midnight) IST**, submission form on the hackathon's own page. No live demo — judges only see what's in the submission, so the demo video and the writeup matter as much as the code.
 
 This plan assumes today is **Friday, Sept 18** (day 2 — kickoff was Thursday, and idea/architecture work is already done as of writing this). Adjust dates if you're reading this later than expected.
 
@@ -49,7 +49,7 @@ Late afternoon:
 - [ ] Record the actual 3-minute demo video (remember: **the video is what judges see, there's no live demo**)
 - [ ] Write the submission writeup (problem, build, where AWS fits — required fields)
 - [ ] Public repo pushed, README current
-- [ ] Submit before 8:00 PM IST — don't wait until the last hour, the form closes hard at the deadline
+- [ ] Submit before the deadline (extended from 8:00 PM to 12:00 AM IST) — don't wait until the last hour, the form closes hard at the deadline
 
 ## Rule for the whole weekend
 

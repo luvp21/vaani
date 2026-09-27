@@ -6,7 +6,7 @@ Full rules: wemakedevs.org/aws/first-commit/rules. This is the condensed version
 
 - **First Commit**, WeMakeDevs x AWS, Bharat Builds Tour, event 1 of 6
 - Online: Sept 17–20, anywhere in India. Optional in-person day: Sat Sept 19, Polaris School of Technology, Bangalore
-- **Submission deadline: Sunday, Sept 20, 8:00 PM IST**
+- **Submission deadline: Sunday, Sept 20, extended by the organisers from 8:00 PM IST to 12:00 AM (midnight) IST** (check the hackathon page for the final time)
 - Team: **codeDKFYDK / cosmosapiens** — Luv Patel (leader), Poorvanshi Kochar
 
 ## What disqualifies a team (not just costs points)

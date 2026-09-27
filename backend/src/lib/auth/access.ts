@@ -1,8 +1,8 @@
-import { hasLimits } from "@vaani/shared";
+import { hasLimits, PAUSED_MESSAGE } from "@vaani/shared";
 import { getLockedScript } from "../lockScript.js";
 import { HttpError } from "./http.js";
 import { verifyIdToken, type Auth } from "./verify.js";
-import { consume, refund, type QuotaKind } from "./quota.js";
+import { consume, pausedFor, refund, type QuotaKind } from "./quota.js";
 import { enforceDailyRenderCap, enforceRate } from "./rateLimit.js";
 
 export { HttpError };
@@ -57,6 +57,7 @@ export async function guard(
 ): Promise<{ auth: Auth; refundQuota: () => Promise<void> }> {
   const auth = await authenticate(authorization);
   await enforceRate(auth.username, rules.heavy ? "heavy" : "normal", auth.role);
+  if (pausedFor(auth.role, rules.heavy)) throw new HttpError(403, PAUSED_MESSAGE);
   let scriptId: string | undefined;
   if (rules.script) {
     const found =

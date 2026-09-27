@@ -1319,4 +1319,11 @@ Notes:
   Draft button). Tested (101 tests, including a brand-new member and a check that the judge and
   team are unaffected); env var confirmed on the Auth, ScriptPlan, LockScript and RenderTrigger
   functions. To reopen: redeploy with `PauseVideoCreation=false` and every other parameter.
+- **Deadline extended to 12:00 AM IST (told by the team).** The docs that named 8:00 PM now say so.
+  Same evening: the pause also closes routes that spend money but carry no quota of their own
+  (`write-scene`, `scene-gen`, `ingest`, `transcribe`, `narrate`) for accounts with limits, through
+  `pausedFor()` in the central guard, so a hand-made API call can't spend model time while
+  creation is paused. Tested with a real throwaway tester account against the live API (created
+  and deleted through the Cognito admin API): plan and lock answered 403 with the paused message,
+  the app received limits of 0, browsing (`GET /api/projects`) still answered 200.
 
