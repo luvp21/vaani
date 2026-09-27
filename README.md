@@ -121,3 +121,10 @@ The core idea is the sync. The script is known word for word before you record, 
 ├── CLAUDE.md   decisions that were locked on purpose, for the coding agent
 └── PROGRESS.md the build log
 ```
+
+## Licence
+
+Vaani is open source under the [MIT licence](LICENSE), copyright 2026 Luv Patel and Poorvanshi Kochar. Issues and pull requests are welcome; the open ideas are listed under "Not built yet" in [`docs/FEATURES.md`](docs/FEATURES.md).
+
+Third-party pieces keep their own licences: React, Vite, Tailwind CSS, shadcn/ui, Shiki, Playwright and the other npm packages in `package.json`; ffmpeg; and the Geist, Geist Mono and Noto Sans Devanagari fonts (SIL Open Font License), which are bundled with the site and embedded in the light video theme. The spoken-style rules use patterns from the open-source humanizer skill. Gemini and Whisper (through Groq) are used as services, not bundled.
+

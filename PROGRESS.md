@@ -1326,4 +1326,8 @@ Notes:
   creation is paused. Tested with a real throwaway tester account against the live API (created
   and deleted through the Cognito admin API): plan and lock answered 403 with the paused message,
   the app received limits of 0, browsing (`GET /api/projects`) still answered 200.
+- **Licence added (Sept 20 night).** MIT, copyright 2026 Luv Patel and Poorvanshi Kochar (`LICENSE`,
+  plus a "Licence" section in the README that names the third-party pieces and their licences, and
+  `"license": "MIT"` in the root `package.json`). The repo was made public earlier the same day; until
+  this file existed it was public but not open source.
 
