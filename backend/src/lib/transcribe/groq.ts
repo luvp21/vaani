@@ -1,5 +1,11 @@
 import Groq, { toFile } from "groq-sdk";
-import { transcribeOutputKey, type ScriptLanguage, type TranscribeStatus, type TranscriptWord } from "@vaani/shared";
+import {
+  FULL_RECORDING_ID,
+  transcribeOutputKey,
+  type ScriptLanguage,
+  type TranscribeStatus,
+  type TranscriptWord,
+} from "@vaani/shared";
 import { getBuffer, putJson, getJson } from "../s3.js";
 import { getLockedScript } from "../lockScript.js";
 import { transliterateTranscript } from "../sync/transliterate.js";
@@ -64,9 +70,14 @@ interface SceneContext {
 async function sceneContext(scriptId: string, sceneId: string): Promise<SceneContext | undefined> {
   try {
     const locked = await getLockedScript(scriptId);
-    const scene = locked.script.scenes.find((s) => s.id === sceneId);
-    if (!scene) return undefined;
-    const text = scene.beats.map((b) => b.text).join(" ");
+    // A continuous take covers every scene, so its prompt and coverage check
+    // are built from the whole script's text, not one scene's.
+    const beats =
+      sceneId === FULL_RECORDING_ID
+        ? locked.script.scenes.flatMap((s) => s.beats)
+        : locked.script.scenes.find((s) => s.id === sceneId)?.beats;
+    if (!beats) return undefined;
+    const text = beats.map((b) => b.text).join(" ");
     return {
       prompt: text.slice(-MAX_PROMPT_CHARS),
       scriptText: text,

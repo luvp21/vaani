@@ -761,8 +761,9 @@ Resources:
       Handler: transcribe.handler
       CodeUri: src
       # Runs the transcription in the background (see handlers/transcribe.ts), so this
-      # is the Whisper call plus its retries, not an API Gateway wait.
-      Timeout: 180
+      # is the Whisper call plus its retries, not an API Gateway wait. 300s gives
+      # headroom for a continuous take's longer transcript and up to 4 retry attempts.
+      Timeout: 300
       Environment:
         Variables:
           GROQ_API_KEY: !Ref GroqApiKey

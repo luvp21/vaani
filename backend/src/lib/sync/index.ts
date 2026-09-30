@@ -1,4 +1,4 @@
-import type { Checkpoint, Scene, TranscriptWord } from "@vaani/shared";
+import type { Beat, Checkpoint, Scene, TranscriptWord } from "@vaani/shared";
 import { hasWordContent, wordsMatch } from "./matches.js";
 
 // The stall threshold, per docs/SYNC_ALGORITHM.md: "start around 15-20
@@ -11,9 +11,9 @@ interface ScriptWord {
   beatId?: string;
 }
 
-function tokenizeScene(scene: Scene): ScriptWord[] {
+function tokenizeBeats(beats: Beat[]): ScriptWord[] {
   const words: ScriptWord[] = [];
-  for (const beat of scene.beats) {
+  for (const beat of beats) {
     const beatWords = beat.text.split(/\s+/).filter(hasWordContent);
     beatWords.forEach((text, index) => {
       words.push({ text, beatId: index === 0 ? beat.id : undefined });
@@ -63,21 +63,26 @@ function classifyMismatch(
 //
 // Stall handling: if j advances stallThreshold words without i moving, the
 // script pointer is stuck on a mumbled/missed/mispronounced word. Force i
-// forward past it rather than freezing the rest of the scene's sync. If the
-// stuck word itself was a beat boundary, it still needs a checkpoint (a
-// checkpoint landing a fraction late is invisible in the final video; a
-// beat with no checkpoint at all is not) — the docs don't spell out this
-// exact case, so: use the current transcript position as the best
-// available approximation.
-export function syncScene(
-  scene: Scene,
+// forward past it rather than freezing the rest of the walk. If the stuck
+// word itself was a beat boundary, it still needs a checkpoint (a checkpoint
+// landing a fraction late is invisible in the final video; a beat with no
+// checkpoint at all is not) — the docs don't spell out this exact case, so:
+// use the current transcript position as the best available approximation.
+//
+// Shared by syncScene() (one scene's own recording) and syncScript() (one
+// continuous take spanning every scene) — everything below cares only about
+// a flat list of beats and words, never about scene boundaries, so the same
+// walk serves both.
+function walk(
+  scriptWords: ScriptWord[],
+  beatsForFallback: Beat[],
   allTranscriptWords: TranscriptWord[],
-  stallThreshold: number = DEFAULT_STALL_THRESHOLD,
+  stallThreshold: number,
+  label: string,
 ): Checkpoint[] {
   // Whisper returns punctuation-only tokens (a dash echoed from the prompt);
   // they can't match anything, so drop them before walking.
   const transcriptWords = allTranscriptWords.filter((w) => hasWordContent(w.text));
-  const scriptWords = tokenizeScene(scene);
   const checkpoints: Checkpoint[] = [];
   let i = 0;
   let j = 0;
@@ -110,7 +115,7 @@ export function syncScene(
       stalledFor += 1;
       if (stalledFor >= stallThreshold) {
         console.warn(
-          `sync: stalled ${stallThreshold}+ transcript words on script word "${currentScriptWord.text}" (scene ${scene.id}, script index ${i}) — skipping it`,
+          `sync: stalled ${stallThreshold}+ transcript words on script word "${currentScriptWord.text}" (${label}, script index ${i}) — skipping it`,
         );
         if (currentScriptWord.beatId) {
           const fallbackIndex = Math.min(j, transcriptWords.length - 1);
@@ -125,7 +130,7 @@ export function syncScene(
   // Safety net: a beat whose script words never matched at all (transcript
   // ran out early, or every one of its words stalled) still needs a
   // checkpoint, or the render step ends up with a missing beat entirely.
-  // These are always a contiguous trailing run of scene.beats — the walk
+  // These are always a contiguous trailing run of beatsForFallback — the walk
   // above only ever moves i forward through script words in beat order, so
   // once the transcript runs out, every beat from that point on is
   // uncovered. Spread them proportionally by word count across the time
@@ -136,7 +141,7 @@ export function syncScene(
   // beat — the common case — this reduces to the original behavior: that
   // beat still lands exactly on the transcript's last timestamp.)
   const covered = new Set(checkpoints.map((c) => c.beat_id));
-  const uncoveredBeats = scene.beats.filter((beat) => !covered.has(beat.id));
+  const uncoveredBeats = beatsForFallback.filter((beat) => !covered.has(beat.id));
   if (uncoveredBeats.length > 0) {
     const anchorStart = checkpoints.length > 0 ? Math.max(...checkpoints.map((c) => c.timestamp_ms)) : 0;
     const anchorEnd = transcriptWords[transcriptWords.length - 1]?.end_ms ?? anchorStart;
@@ -151,7 +156,29 @@ export function syncScene(
     });
   }
 
-  const order = scene.beats.map((b) => b.id);
+  const order = beatsForFallback.map((b) => b.id);
   checkpoints.sort((a, b) => order.indexOf(a.beat_id) - order.indexOf(b.beat_id));
   return checkpoints;
+}
+
+export function syncScene(
+  scene: Scene,
+  allTranscriptWords: TranscriptWord[],
+  stallThreshold: number = DEFAULT_STALL_THRESHOLD,
+): Checkpoint[] {
+  return walk(tokenizeBeats(scene.beats), scene.beats, allTranscriptWords, stallThreshold, `scene ${scene.id}`);
+}
+
+// Continuous-take equivalent of syncScene(): matches one long transcript
+// against every scene's beats in document order, as if the whole script were
+// one scene. Used when recording_mode is "continuous" (see CLAUDE.md and
+// computeSync.ts) — one recording covers every scene back to back, so sync
+// has to run across all of them at once instead of scene by scene.
+export function syncScript(
+  scenes: Scene[],
+  allTranscriptWords: TranscriptWord[],
+  stallThreshold: number = DEFAULT_STALL_THRESHOLD,
+): Checkpoint[] {
+  const beats = scenes.flatMap((scene) => scene.beats);
+  return walk(tokenizeBeats(beats), beats, allTranscriptWords, stallThreshold, "the continuous take");
 }

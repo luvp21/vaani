@@ -8,6 +8,7 @@ import { NarrationPanel } from "@/components/NarrationPanel";
 import { RenderPanel } from "@/components/RenderPanel";
 import { SyncPanel } from "@/components/SyncPanel";
 import { TeleprompterRecorder } from "@/components/TeleprompterRecorder";
+import { ContinuousRecorder } from "@/components/ContinuousRecorder";
 import { Stepper, type StepId, type StepState } from "@/components/Stepper";
 import { StudioHeader } from "@/components/StudioHeader";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -334,15 +335,27 @@ export default function Studio() {
             doesn't drop the camera stream or the list of uploaded scenes. */}
         {script && lockedScriptId && (
           <div className={active === "record" ? undefined : "hidden"}>
-            <TeleprompterRecorder
-              script={script}
-              lockedScriptId={lockedScriptId}
-              initialCompletedSceneIds={recordedSceneIds}
-              onComplete={() => {
-                setRecorded(true);
-                setActive("sync");
-              }}
-            />
+            {script.recording_mode === "continuous" ? (
+              <ContinuousRecorder
+                script={script}
+                lockedScriptId={lockedScriptId}
+                alreadyRecorded={recordedSceneIds.length >= script.scenes.length}
+                onComplete={() => {
+                  setRecorded(true);
+                  setActive("sync");
+                }}
+              />
+            ) : (
+              <TeleprompterRecorder
+                script={script}
+                lockedScriptId={lockedScriptId}
+                initialCompletedSceneIds={recordedSceneIds}
+                onComplete={() => {
+                  setRecorded(true);
+                  setActive("sync");
+                }}
+              />
+            )}
           </div>
         )}
 

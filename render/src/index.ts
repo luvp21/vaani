@@ -18,7 +18,7 @@ import { beatVisualHtml, chromeFor } from "./visuals.js";
 import { closeBrowser } from "./screenshot.js";
 import { runFfmpeg } from "./ffmpeg.js";
 import { assembleScene, frameCounts, renderBeatClip } from "./beatClip.js";
-import { renderSceneFromRecording } from "./realRender.js";
+import { renderContinuousRecording, renderSceneFromRecording } from "./realRender.js";
 
 async function setStatus(scriptId: string, status: RenderStatus["status"], error?: string): Promise<void> {
   const body: RenderStatus = { script_id: scriptId, status, error, updated_at: new Date().toISOString() };
@@ -89,7 +89,12 @@ async function main(): Promise<void> {
   const workDir = await mkdtemp(path.join(tmpdir(), "vaani-render-"));
 
   const sceneVideoPaths: string[] = [];
-  if (sync) {
+  if (sync && locked.script.recording_mode === "continuous") {
+    // One recording spans the whole script: renderContinuousRecording()
+    // already produces the finished video, so there is exactly one "scene"
+    // to hand to the concat step below (a harmless one-file remux).
+    sceneVideoPaths.push(await renderContinuousRecording(locked, sync, workDir));
+  } else if (sync) {
     for (const scene of locked.script.scenes) {
       const sceneCheckpoints = sync.scenes.find((s) => s.scene_id === scene.id);
       if (!sceneCheckpoints) throw new Error(`Scene ${scene.id} missing from sync result`);

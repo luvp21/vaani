@@ -19,6 +19,7 @@ import {
   type ScriptLanguage,
   type VideoFormatId,
   type VideoTheme,
+  type RecordingMode,
 } from "@vaani/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,7 +45,12 @@ export interface GenerateStatus {
 }
 
 interface RepoFormProps {
-  onSubmit: (repoUrl: string, userContext: string, format: VideoFormatId, options: { language: ScriptLanguage; theme: VideoTheme; targetMinutes?: number; sourceScript?: string }) => void;
+  onSubmit: (
+    repoUrl: string,
+    userContext: string,
+    format: VideoFormatId,
+    options: { language: ScriptLanguage; theme: VideoTheme; targetMinutes?: number; sourceScript?: string; recordingMode: RecordingMode },
+  ) => void;
   status: GenerateStatus | null;
 }
 
@@ -93,6 +99,7 @@ export function RepoForm({ onSubmit, status }: RepoFormProps) {
   const [userContext, setUserContext] = useState("");
   const [language, setLanguage] = useState<ScriptLanguage>(DEFAULT_SCRIPT_LANGUAGE);
   const [theme, setTheme] = useState<VideoTheme>(DEFAULT_VIDEO_THEME);
+  const [recordingMode, setRecordingMode] = useState<RecordingMode>("scenes");
   const [format, setFormat] = useState<VideoFormatId>("hackathon_demo");
   const [minutes, setMinutes] = useState<number>(VIDEO_FORMATS.hackathon_demo.defaultMinutes);
   const [sourceScript, setSourceScript] = useState("");
@@ -115,6 +122,7 @@ export function RepoForm({ onSubmit, status }: RepoFormProps) {
       theme,
       targetMinutes: hasOwnScript ? undefined : minutes,
       sourceScript: hasOwnScript ? sourceScript.trim() : undefined,
+      recordingMode: limited ? "scenes" : recordingMode,
     });
   }
 
@@ -271,6 +279,33 @@ export function RepoForm({ onSubmit, status }: RepoFormProps) {
                 </Tabs>
                 <p className="text-xs text-muted-foreground">{VIDEO_THEMES[theme].description}</p>
               </div>
+
+              {/* Reading one long take instead of scene by scene is only for accounts with
+                  no length limit — it's meant for long-form videos well past 3 minutes. */}
+              {!limited && (
+                <div className="flex max-w-xs flex-col gap-2">
+                  <Label id="recording-mode-label">Recording</Label>
+                  <Tabs
+                    value={recordingMode}
+                    onValueChange={(value) => setRecordingMode(value as RecordingMode)}
+                    aria-labelledby="recording-mode-label"
+                  >
+                    <TabsList>
+                      <TabsTrigger value="scenes" disabled={busy}>
+                        Scene by scene
+                      </TabsTrigger>
+                      <TabsTrigger value="continuous" disabled={busy}>
+                        One take
+                      </TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                  <p className="text-xs text-muted-foreground">
+                    {recordingMode === "continuous"
+                      ? "Read the whole script in one unbroken take. No scene cuts in the final video."
+                      : "Record and retake each scene on its own."}
+                  </p>
+                </div>
+              )}
             </div>
           </section>
 

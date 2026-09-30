@@ -1,6 +1,6 @@
 import type { APIGatewayProxyEventV2, APIGatewayProxyStructuredResultV2 } from "aws-lambda";
 import { InvokeCommand, LambdaClient } from "@aws-sdk/client-lambda";
-import { TranscribeRequestSchema, recordingKey } from "@vaani/shared";
+import { TranscribeRequestSchema, transcribeSourceKey } from "@vaani/shared";
 import { ZodError } from "zod";
 import { markTranscriptionStarted, startTranscription } from "../lib/transcribe/index.js";
 import { secured } from "./secure.js";
@@ -53,7 +53,7 @@ export const handler = async (event: unknown): Promise<APIGatewayProxyStructured
     // A background run only ever comes from this function invoking itself (Lambda
     // permissions allow nothing else to), so it has no user to check. Failures are
     // already written to the status by startTranscription().
-    await startTranscription(event.script_id, event.scene_id, recordingKey(event.script_id, event.scene_id, "webm")).catch(
+    await startTranscription(event.script_id, event.scene_id, transcribeSourceKey(event.script_id, event.scene_id)).catch(
       () => undefined,
     );
     return;

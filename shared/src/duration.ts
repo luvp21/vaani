@@ -22,8 +22,11 @@ export function formatDuration(totalSeconds: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
-// Target lengths offered in the UI, and a sensible default per format.
-export const TARGET_MINUTES_OPTIONS = [0.5, 1, 2, 3, 5] as const;
+// Target lengths offered in the UI, and a sensible default per format. The
+// 8/10 options only ever show for accounts with no length limit (see
+// hasLimits() in auth.ts and how RepoForm filters this list) — long-form,
+// continuous-take videos are the reason they exist.
+export const TARGET_MINUTES_OPTIONS = [0.5, 1, 2, 3, 5, 8, 10] as const;
 export function minutesLabel(minutes: number): string {
   return minutes < 1 ? `${Math.round(minutes * 60)} sec` : `${minutes} min`;
 }

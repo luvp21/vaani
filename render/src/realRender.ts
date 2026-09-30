@@ -1,5 +1,14 @@
 import path from "node:path";
-import { clipKey, clipSpeed, recordingKey, type LockedScript, type SceneCheckpoints } from "@vaani/shared";
+import {
+  FULL_RECORDING_ID,
+  clipKey,
+  clipSpeed,
+  recordingKey,
+  type Beat,
+  type Checkpoint,
+  type LockedScript,
+  type SceneCheckpoints,
+} from "@vaani/shared";
 import { downloadIfExists, downloadToFile } from "./s3.js";
 import { demoFrameHtml } from "@vaani/shared";
 import { beatVisualHtml, chromeFor } from "./visuals.js";
@@ -25,45 +34,47 @@ import { assembleScene, frameCounts, renderBeatClip, renderFootageClip } from ".
 // real speech pacing) should be overridden here.
 const MIN_BEAT_HOLD_SECONDS = 0.8;
 
-// Real-recording render path (CLAUDE.md #1's primary path, not the Polly
-// fallback): visuals cut in full-screen at each beat's real sync checkpoint,
-// with the scene's actual recorded audio (the presenter's real voice)
-// playing throughout, and the presenter's face in a bubble over it (faceOverlay.ts).
-// Product-demo beats show the presenter's own silent screen clip for that step,
-// recorded separately from the narration so the app can use the mic. Each beat
-// is an animated clip (beatClip.ts) so a cut lands as an entrance, not a hard jump.
-export async function renderSceneFromRecording(
-  locked: LockedScript,
-  sceneCheckpoints: SceneCheckpoints,
-  sceneId: string,
-  workDir: string,
-): Promise<string> {
-  const scenes = locked.script.scenes;
-  const sceneIndex = scenes.findIndex((s) => s.id === sceneId);
-  const scene = scenes[sceneIndex];
-  if (!scene) throw new Error(`Scene ${sceneId} missing from script`);
+// One beat, with where it sits in the original script (chromeFor's bottom bar
+// wants a real scene index and a real position within that scene, even when
+// every beat here has been flattened out of several scenes for a continuous
+// take — see renderContinuousRecording).
+interface PositionedBeat {
+  beat: Beat;
+  sceneIndex: number;
+  beatIndexInScene: number;
+}
 
-  const { checkpoints } = sceneCheckpoints;
-  if (checkpoints.length !== scene.beats.length) {
-    throw new Error(
-      `Scene ${sceneId}: expected ${scene.beats.length} checkpoints (one per beat), got ${checkpoints.length}`,
-    );
+// Shared by renderSceneFromRecording (one scene, its own recording) and
+// renderContinuousRecording (every scene's beats, one recording spanning all
+// of them): builds one animated clip per beat from the real checkpoint gaps,
+// lays the recording's real audio underneath, and overlays the presenter's
+// face if the recording has a video track. `outId` only names the temp files.
+async function renderClipsAgainstRecording(params: {
+  locked: LockedScript;
+  scenes: { title: string; beats: unknown[] }[];
+  beats: PositionedBeat[];
+  checkpoints: Checkpoint[];
+  recordingPath: string;
+  workDir: string;
+  outId: string;
+}): Promise<string> {
+  const { locked, scenes, beats, checkpoints, recordingPath, workDir, outId } = params;
+  if (checkpoints.length !== beats.length) {
+    throw new Error(`${outId}: expected ${beats.length} checkpoints (one per beat), got ${checkpoints.length}`);
   }
-  scene.beats.forEach((beat, index) => {
+  beats.forEach(({ beat }, index) => {
     if (checkpoints[index].beat_id !== beat.id) {
-      throw new Error(`Scene ${sceneId}: checkpoint order doesn't match beat order at index ${index}`);
+      throw new Error(`${outId}: checkpoint order doesn't match beat order at index ${index}`);
     }
   });
 
-  const recordingPath = path.join(workDir, `${sceneId}-recording.webm`);
-  await downloadToFile(recordingKey(locked.script_id, sceneId, "webm"), recordingPath);
   const recordingDurationMs = await getMediaDurationMs(recordingPath);
   // The narration take is camera + mic, so it is also where the face comes
   // from. No video track (camera denied, audio-only) just means no bubble.
   const facePath = (await hasVideoStream(recordingPath)) ? recordingPath : null;
   const hasFace = facePath !== null;
 
-  const durations = scene.beats.map((_, i) => {
+  const durations = beats.map((_, i) => {
     // The first beat owns everything before the first spoken word (the
     // silence between pressing record and speaking). Measuring it from its own
     // checkpoint instead drops that lead-in from the video, and since the
@@ -75,9 +86,9 @@ export async function renderSceneFromRecording(
   const frames = frameCounts(durations);
 
   const clipPaths: string[] = [];
-  for (let i = 0; i < scene.beats.length; i++) {
-    const beat = scene.beats[i];
-    const chrome = chromeFor(scenes, sceneIndex, i, hasFace, locked.script.theme);
+  for (let i = 0; i < beats.length; i++) {
+    const { beat, sceneIndex, beatIndexInScene } = beats[i];
+    const chrome = chromeFor(scenes, sceneIndex, beatIndexInScene, hasFace, locked.script.theme);
     if (beat.visual_spec.visual_type === "ui_demo") {
       const footage = await fetchDemoClip(locked.script_id, beat.id, workDir);
       if (footage) {
@@ -103,15 +114,79 @@ export async function renderSceneFromRecording(
     clipPaths.push(await renderBeatClip({ html, frames: frames[i], workDir, id: beat.id }));
   }
 
-  const sceneVideoPath = path.join(workDir, `${sceneId}.mp4`);
+  const outPath = path.join(workDir, `${outId}.mp4`);
   if (!facePath) {
-    await assembleScene({ clipPaths, audioPath: recordingPath, outPath: sceneVideoPath, workDir, sceneId });
-    return sceneVideoPath;
+    await assembleScene({ clipPaths, audioPath: recordingPath, outPath, workDir, sceneId: outId });
+    return outPath;
   }
-  const bareScenePath = path.join(workDir, `${sceneId}-bare.mp4`);
-  await assembleScene({ clipPaths, audioPath: recordingPath, outPath: bareScenePath, workDir, sceneId });
-  await overlayFace({ scenePath: bareScenePath, facePath, outPath: sceneVideoPath });
-  return sceneVideoPath;
+  const barePath = path.join(workDir, `${outId}-bare.mp4`);
+  await assembleScene({ clipPaths, audioPath: recordingPath, outPath: barePath, workDir, sceneId: outId });
+  await overlayFace({ scenePath: barePath, facePath, outPath });
+  return outPath;
+}
+
+// Real-recording render path (CLAUDE.md #1's primary path, not the Polly
+// fallback): visuals cut in full-screen at each beat's real sync checkpoint,
+// with the scene's actual recorded audio (the presenter's real voice)
+// playing throughout, and the presenter's face in a bubble over it (faceOverlay.ts).
+// Product-demo beats show the presenter's own silent screen clip for that step,
+// recorded separately from the narration so the app can use the mic. Each beat
+// is an animated clip (beatClip.ts) so a cut lands as an entrance, not a hard jump.
+export async function renderSceneFromRecording(
+  locked: LockedScript,
+  sceneCheckpoints: SceneCheckpoints,
+  sceneId: string,
+  workDir: string,
+): Promise<string> {
+  const scenes = locked.script.scenes;
+  const sceneIndex = scenes.findIndex((s) => s.id === sceneId);
+  const scene = scenes[sceneIndex];
+  if (!scene) throw new Error(`Scene ${sceneId} missing from script`);
+
+  const recordingPath = path.join(workDir, `${sceneId}-recording.webm`);
+  await downloadToFile(recordingKey(locked.script_id, sceneId, "webm"), recordingPath);
+
+  return renderClipsAgainstRecording({
+    locked,
+    scenes,
+    beats: scene.beats.map((beat, beatIndexInScene) => ({ beat, sceneIndex, beatIndexInScene })),
+    checkpoints: sceneCheckpoints.checkpoints,
+    recordingPath,
+    workDir,
+    outId: sceneId,
+  });
+}
+
+// Continuous-take render path (recording_mode: "continuous" — see CLAUDE.md's
+// recording decision and shared/src/index.ts). One recording spans every
+// scene's beats back to back, so there is one audio/video track for the whole
+// video, not one per scene: the presenter's face and voice never cut, only the
+// background visual changes at each beat's checkpoint, exactly like a single
+// very long scene. Produces the final video directly — index.ts's concat step
+// then has exactly one file to "join", a harmless no-op remux.
+export async function renderContinuousRecording(
+  locked: LockedScript,
+  syncResult: { scenes: SceneCheckpoints[] },
+  workDir: string,
+): Promise<string> {
+  const scenes = locked.script.scenes;
+  const beats: PositionedBeat[] = scenes.flatMap((scene, sceneIndex) =>
+    scene.beats.map((beat, beatIndexInScene) => ({ beat, sceneIndex, beatIndexInScene })),
+  );
+  const checkpoints = syncResult.scenes.flatMap((s) => s.checkpoints);
+
+  const recordingPath = path.join(workDir, `${FULL_RECORDING_ID}-recording.webm`);
+  await downloadToFile(recordingKey(locked.script_id, FULL_RECORDING_ID, "webm"), recordingPath);
+
+  return renderClipsAgainstRecording({
+    locked,
+    scenes,
+    beats,
+    checkpoints,
+    recordingPath,
+    workDir,
+    outId: FULL_RECORDING_ID,
+  });
 }
 
 // The step's screen clip, if the presenter recorded one. A skipped step is not

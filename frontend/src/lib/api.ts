@@ -33,6 +33,7 @@ import {
   type Session,
   type ScriptLanguage,
   type VideoTheme,
+  type RecordingMode,
   type SceneGenResponse,
   type PlannedScene,
 } from "@vaani/shared";
@@ -104,6 +105,7 @@ export interface GenerateOptions {
   theme?: VideoTheme;
   targetMinutes?: number;
   sourceScript?: string;
+  recordingMode?: RecordingMode;
 }
 
 // Step 1: the outline only (one entry per scene, with a word budget).
@@ -182,11 +184,11 @@ export function getRecordingUploadUrl(
   scriptId: string,
   sceneId: string,
   contentType: string,
-  beatId?: string,
+  options: { beatId?: string; audioOnly?: boolean } = {},
 ): Promise<RecordingUploadUrlResponse> {
   return postJson(
     "/recording/upload-url",
-    { script_id: scriptId, scene_id: sceneId, content_type: contentType, beat_id: beatId },
+    { script_id: scriptId, scene_id: sceneId, content_type: contentType, beat_id: options.beatId, audio_only: options.audioOnly },
     RecordingUploadUrlResponseSchema,
   );
 }

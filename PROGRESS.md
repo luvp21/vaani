@@ -1340,3 +1340,58 @@ Notes:
   limits (`{"drafts":5,"locks":3,"renders":1}`, not zero) and a successful `POST /api/ingest` (200).
   Landing page and judge link both still 200, no Lambda errors in the following 10 minutes, both
   CloudWatch alarms OK. README and `docs/OPERATIONS.md` updated to say the pause is off.
+
+## Wednesday, Sept 30 (post-hackathon, personal use)
+
+- **Long-form continuous-take recording, for the user's own ongoing project (an AI-drawing dev-log,
+  8 to 10 minute videos).** New opt-in `recording_mode: "continuous"` on `Script` (default stays
+  `"scenes"`, unchanged for everyone else). Vaani still writes the full script up front like today;
+  the only real change is you read the whole thing in one unbroken take instead of stopping to
+  re-record each scene, so the presenter's face and voice never cut in the final video, only the
+  background visual changes.
+  - **Sync:** `syncScene()`'s walk was extracted into a shared core, reused by new `syncScript()`,
+    which runs the same two-pointer match across every scene's beats in one pass instead of scene by
+    scene. `computeSync()` branches on `recording_mode`; a continuous take's flat checkpoint list is
+    bucketed back into per-scene `SceneCheckpoints[]` (`bucketByScene()`, exported and unit tested),
+    with each scene's `duration_ms` set so they still sum to the take's real length — so
+    `totalSpeechMs()` (the length-limit check) and everything else downstream sees the same shape it
+    always has, regardless of which mode produced it.
+  - **Recording:** new `ContinuousRecorder.tsx` (parallel to `TeleprompterRecorder.tsx`, which is
+    untouched) — one scrollable prompter for the whole script, Start/Pause/Resume/Stop, one take, no
+    per-scene retake (only "start over"). Also records a small mic-only companion track alongside the
+    main video (a second `MediaRecorder` on just the audio tracks, started/stopped in lockstep):
+    Groq's Whisper API caps uploads at 25 MB (free) to 100 MB (paid), and an 8 to 10 minute webcam
+    video is comfortably over that even at Chrome's default bitrate, while the audio-only file is a
+    few MB. Uploaded under its own key (`transcribeSourceKey()`, `recording/upload-url`'s new
+    `audio_only` field) so transcription reads the small file, never the full video.
+  - **Render:** `renderSceneFromRecording()`'s beat-clip-building core was factored out into
+    `renderClipsAgainstRecording()`, reused by new `renderContinuousRecording()`, which flattens every
+    scene's beats into one ordered list and downloads the one full recording instead of one per scene
+    — producing the finished video directly (no per-scene concat). `index.ts`'s `main()` branches on
+    `recording_mode`.
+  - **Dashboard/stage:** a continuous take is stored under one sentinel id (`FULL_RECORDING_ID =
+    "__full__"`), not one per scene, so `projects.ts`'s `summarize()` now translates that into every
+    real scene id once the recording exists (`resolvedRecordedSceneIds()`) — everything downstream
+    (`deriveStage`, the dashboard, `stepForProject`) keeps comparing `recorded_scene_ids.length` to
+    `scene_count` exactly as before, unaware anything is different.
+  - **UI:** `RepoForm` gets a "Scene by scene" / "One take" toggle, shown only for accounts with no
+    length limit (`hasLimits(role)` false) — this is not offered to testers or Google members.
+    `TARGET_MINUTES_OPTIONS` extended to 8 and 10 minutes, same gating. `TranscribeFunction`'s Lambda
+    timeout raised 180s -> 300s for a longer transcript plus retries.
+  - **Tested:** 6 new backend tests (`syncScript` across scene boundaries, matching `syncScene`
+    exactly on one scene, a stutter not leaking across a scene boundary; `bucketByScene`'s split and
+    duration math) — suite is 107, all green. Full type-check across all four workspaces. Live,
+    post-deploy: a real continuous-mode script (`recording_mode: "continuous"`) locked through the
+    real API and round-tripped correctly; the `audio_only` upload-url request produces a distinct S3
+    key from the normal one, at the exact path transcription expects.
+  - **Not tested: an actual webcam recording start-to-finish.** I can't operate a camera/mic myself,
+    so `ContinuousRecorder.tsx`'s browser recording flow (two simultaneous `MediaRecorder`s, the pop-out
+    prompter, pause/resume, the real Groq transcription of a genuine long recording, and the finished
+    render) still needs a real pass by the user before trusting it for the actual dev-log videos.
+  - **Deployed:** Fargate image rebuilt and pushed (new digest confirmed in ECR), backend redeployed
+    (confirmed `TranscribeFunction` timeout is 300s live). `docker` was inactive on this machine again;
+    `systemctl start docker` worked without sudo this time.
+  - **Left out of scope:** `ui_demo` (product-demo) beats in continuous mode have no matching
+    recording flow — they render as the existing placeholder text card, same graceful fallback as
+    today when a demo clip is missing. Fine for a talking-through-your-code dev-log; would need its
+    own design if a continuous take ever needs live product demos too.

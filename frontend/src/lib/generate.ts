@@ -57,5 +57,13 @@ export async function generateInSteps(
     title: scene.title,
     beats: scene.beats.map((beat) => ({ ...beat, id: `beat-${++beatNumber}` })),
   }));
-  return { repo_url: ingest.repo_url, user_context: userContext, format, language, theme: options.theme ?? DEFAULT_VIDEO_THEME, scenes };
+  return {
+    repo_url: ingest.repo_url,
+    user_context: userContext,
+    format,
+    language,
+    theme: options.theme ?? DEFAULT_VIDEO_THEME,
+    recording_mode: options.recordingMode ?? "scenes",
+    scenes,
+  };
 }

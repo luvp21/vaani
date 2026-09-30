@@ -150,7 +150,7 @@ export function DemoClipsPanel({ beats, lockedScriptId, sceneId }: DemoClipsPane
     setError(null);
     setState(beat.id, "uploading");
     try {
-      const { upload_url } = await api.getRecordingUploadUrl(lockedScriptId, sceneId, blob.type, beat.id);
+      const { upload_url } = await api.getRecordingUploadUrl(lockedScriptId, sceneId, blob.type, { beatId: beat.id });
       await api.uploadRecording(upload_url, blob);
       setState(beat.id, "done");
       setActiveId(null);

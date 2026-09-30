@@ -1,4 +1,5 @@
 import {
+  FULL_RECORDING_ID,
   lockedScriptKey,
   renderStatusKey,
   type LockedScript,
@@ -28,12 +29,27 @@ function deriveStage(recordedCount: number, synced: boolean, render: RenderStatu
   return "scripted";
 }
 
+// A continuous take stores one recording under the FULL_RECORDING_ID
+// sentinel, not one per scene — so the raw S3 listing only ever shows that
+// one id, never the real scene ids. Everything downstream (deriveStage, the
+// dashboard, Studio's stepForProject) compares recorded_scene_ids.length
+// against scene_count, so once the one continuous recording exists, report
+// every real scene id as recorded: to every consumer this then looks exactly
+// like a "scenes" mode project where every scene finished recording.
+function resolvedRecordedSceneIds(locked: LockedScript, rawRecordedIds: string[]): string[] {
+  if (locked.script.recording_mode === "continuous" && rawRecordedIds.includes(FULL_RECORDING_ID)) {
+    return locked.script.scenes.map((s) => s.id);
+  }
+  return rawRecordedIds;
+}
+
 function summarize(
   locked: LockedScript,
-  recordedSceneIds: string[],
+  rawRecordedSceneIds: string[],
   synced: boolean,
   renderStatus: RenderStatus["status"] | null,
 ): ProjectSummary {
+  const recordedSceneIds = resolvedRecordedSceneIds(locked, rawRecordedSceneIds);
   const beatCount = locked.script.scenes.reduce((sum, scene) => sum + scene.beats.length, 0);
   return {
     script_id: locked.script_id,

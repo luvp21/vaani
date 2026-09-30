@@ -114,9 +114,15 @@ export const ScriptSchema = z.object({
   language: ScriptLanguageSchema.default("hinglish"),
   // Look of the slides, diagrams and charts. Old scripts predate it and stay dark.
   theme: VideoThemeSchema.default("dark"),
+  // "scenes" (default): record each scene as its own take, scene by scene.
+  // "continuous": read the whole script in one unbroken take (no scene
+  // breaks in the recording), for long-form videos where per-scene cuts
+  // would feel choppy. Old scripts predate it and stay "scenes".
+  recording_mode: z.enum(["scenes", "continuous"]).default("scenes"),
   scenes: z.array(SceneSchema),
 });
 export type Script = z.infer<typeof ScriptSchema>;
+export type RecordingMode = z.infer<typeof ScriptSchema.shape.recording_mode>;
 
 // Recording -> Transcription
 export const TranscriptWordSchema = z.object({
@@ -355,6 +361,10 @@ export const RecordingUploadUrlRequestSchema = z.object({
   // Set for a demo clip (one ui_demo beat's screen recording) instead of the
   // scene's narration take.
   beat_id: z.string().optional(),
+  // Set for the small mic-only companion recording made alongside a
+  // continuous take, uploaded under its own key so it never collides with
+  // the full video recording (see FULL_RECORDING_ID).
+  audio_only: z.boolean().optional(),
 });
 export type RecordingUploadUrlRequest = z.infer<typeof RecordingUploadUrlRequestSchema>;
 

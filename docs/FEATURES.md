@@ -47,6 +47,7 @@ The script picks the block that fits what is being said, one per slide, and neve
 | Feature | What it does | Where to find it | Built with |
 |---|---|---|---|
 | Teleprompter, scene by scene | Read each scene from the prompter. Retake as often as you like before keeping a take | Studio, step 3 (Record) | `getUserMedia`, MediaRecorder |
+| One continuous take | For long-form videos: read the whole script in one unbroken take, no scene cuts in the final video. Only offered to accounts with no length limit | Studio, "Recording" on the repo step ("One take") | `getUserMedia`, a second mic-only MediaRecorder for transcription |
 | Pop-out prompter | The prompter in its own window, so it can sit next to your camera | Record, "Pop out prompter" | Browser window API |
 | Product-demo clips | One silent screen clip per demo step, recorded apart from your narration, so the app you show can use the microphone. Pause through waiting and retake one step | Record, "Demo clips for this scene" | `getDisplayMedia` |
 | Direct upload | Recordings go from your browser straight to storage | Automatic | S3 presigned URLs |

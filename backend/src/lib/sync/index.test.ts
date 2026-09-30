@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Scene, TranscriptWord } from "@vaani/shared";
-import { syncScene } from "./index.js";
+import { syncScene, syncScript } from "./index.js";
 import { phoneticKey, wordsMatch } from "./matches.js";
 
 // Per docs/SYNC_ALGORITHM.md: "Write a standalone test with a fake
@@ -265,5 +265,77 @@ test("punctuation-only tokens (a dash) in the script or transcript don't stall t
   assert.deepEqual(syncScene(s, transcript), [
     { beat_id: "beat-1", timestamp_ms: 0 },
     { beat_id: "beat-2", timestamp_ms: 1600 },
+  ]);
+});
+
+// syncScript() is recording_mode: "continuous" — one recording spans every
+// scene's beats back to back, so the walk has to run across all of them as
+// one sequence instead of scene by scene (computeSync.ts branches on this).
+test("syncScript matches beats across scene boundaries in one continuous walk", () => {
+  const scenes = [
+    scene("scene-1", [
+      { id: "beat-1", text: "Toh yahan pe dekho" },
+      { id: "beat-2", text: "Simple hai" },
+    ]),
+    scene("scene-2", [
+      { id: "beat-3", text: "Ab agla part dekhte hain" },
+    ]),
+  ];
+  const transcript = words([
+    ["toh", 0, 200],
+    ["yahan", 200, 500],
+    ["pe", 500, 700],
+    ["dekho", 700, 1000],
+    ["simple", 1000, 1300],
+    ["hai", 1300, 1500],
+    ["ab", 1500, 1700],
+    ["agla", 1700, 2000],
+    ["part", 2000, 2300],
+    ["dekhte", 2300, 2600],
+    ["hain", 2600, 2900],
+  ]);
+  assert.deepEqual(syncScript(scenes, transcript), [
+    { beat_id: "beat-1", timestamp_ms: 0 },
+    { beat_id: "beat-2", timestamp_ms: 1000 },
+    { beat_id: "beat-3", timestamp_ms: 1500 },
+  ]);
+});
+
+test("syncScript on one scene matches syncScene's own result exactly (same shared walk)", () => {
+  const s = scene("scene-1", [
+    { id: "beat-1", text: "Toh yahan pe dekho" },
+    { id: "beat-2", text: "Simple hai" },
+  ]);
+  const transcript = words([
+    ["toh", 0, 200],
+    ["yahan", 200, 500],
+    ["pe", 500, 700],
+    ["dekho", 700, 1000],
+    ["simple", 1000, 1300],
+    ["hai", 1300, 1500],
+  ]);
+  assert.deepEqual(syncScript([s], transcript), syncScene(s, transcript));
+});
+
+test("syncScript: a stutter in scene 2 doesn't shift scene 1's checkpoints, same as within one scene", () => {
+  const scenes = [
+    scene("scene-1", [{ id: "beat-1", text: "Ek function banate hain" }]),
+    scene("scene-2", [{ id: "beat-2", text: "Ab isko test karte hain" }]),
+  ];
+  const transcript = words([
+    ["ek", 0, 200],
+    ["function", 200, 500],
+    ["banate", 500, 800],
+    ["hain", 800, 1000],
+    ["ab", 1000, 1200],
+    ["ab", 1200, 1400], // stutter: repeated
+    ["isko", 1400, 1700],
+    ["test", 1700, 2000],
+    ["karte", 2000, 2300],
+    ["hain", 2300, 2600],
+  ]);
+  assert.deepEqual(syncScript(scenes, transcript), [
+    { beat_id: "beat-1", timestamp_ms: 0 },
+    { beat_id: "beat-2", timestamp_ms: 1000 },
   ]);
 });
